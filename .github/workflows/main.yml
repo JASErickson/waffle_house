@@ -2,7 +2,7 @@ name: Run Scraper Daily
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs at midnight every day
+    - cron: '0 0 * * *'  # Runs at 6pm central (midnight UTC) every day
 
 jobs:
   scrape:
