@@ -1,6 +1,7 @@
 name: Run Scraper and Upload to Google Drive
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'  # Runs at 6pm central (midnight UTC) every day
 
