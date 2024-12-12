@@ -27,6 +27,9 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install --use-pep517 -r requirements.txt
 
+    - name: Set up Google Cloud credentials
+      run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > /tmp/credentials.json
+
     - name: Run scraper and save CSV
       run: |
         python web_scrape.py
