@@ -25,7 +25,7 @@ jobs:
 
     - name: Run scraper and save CSV
       run: |
-        python scrape_waffle_house.py
+        python web_scrape.py
         echo "Scraping and CSV generation complete."
 
     - name: Upload CSV to Google Drive
