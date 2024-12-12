@@ -3,8 +3,16 @@ import re
 import json
 import pandas as pd
 from datetime import datetime
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
-csv_file = '/Users/jake/Desktop/Waffle House.csv'
+
+# Set your Google Drive folder ID here
+FOLDER_ID = '1bbrB90d_heokUah87yaFvoEubxSMelTV'  # Replace with your folder ID
+
+# Path to the CSV file on the local system before uploading to Google Drive
+LOCAL_CSV_PATH = '/tmp/waffle_house_data.csv'  # Use a temporary location on GitHub Actions or local machine
 
 def scrape_waffle_house_data():
     url = 'https://locations.wafflehouse.com'  # Replace with the actual URL if needed
@@ -62,11 +70,11 @@ def scrape_waffle_house_data():
                 # Convert the list of dictionaries to a Pandas DataFrame
                 df = pd.DataFrame(store_info_list)
 
-                # Append the DataFrame to a CSV file, if it exists, otherwise create it
-                df.to_csv(csv_file, mode='a', header=not pd.io.common.file_exists(csv_file))
+                # Save the DataFrame to a local CSV file (in a temporary location, e.g., /tmp/waffle_house_data.csv)
+                df.to_csv(LOCAL_CSV_PATH, mode='a', header=not pd.io.common.file_exists(LOCAL_CSV_PATH))
 
-                # Display the first three rows of the DataFrame
-                print(df.head(3))
+                # Now, upload the CSV file to Google Drive
+                upload_to_google_drive(LOCAL_CSV_PATH)
 
             except json.JSONDecodeError:
                 print("Error decoding JSON data.")
@@ -75,5 +83,19 @@ def scrape_waffle_house_data():
     else:
         print(f"Failed to retrieve the page. Status code: {response.status_code}")
 
-# Call the function to test it
+def upload_to_google_drive(file_path):
+    # Authenticate with Google
+    credentials = service_account.Credentials.from_service_account_file('/tmp/credentials.json')
+    drive_service = build('drive', 'v3', credentials=credentials)
+
+    # Define the file metadata and media for uploading
+    file_metadata = {'name': 'waffle_house_data.csv', 'parents': [FOLDER_ID]}  # Specify the folder ID here
+    media = MediaFileUpload(file_path, mimetype='text/csv')
+
+    # Upload the file to Google Drive
+    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+    print(f'File uploaded successfully: {file.get("id")}')
+
+# Call the function to run the scraper and upload the CSV
 scrape_waffle_house_data()

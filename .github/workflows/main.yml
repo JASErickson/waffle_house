@@ -1,11 +1,11 @@
-name: Run Scraper Daily
+name: Run Scraper and Upload to Google Drive
 
 on:
   schedule:
     - cron: '0 0 * * *'  # Runs at 6pm central (midnight UTC) every day
 
 jobs:
-  scrape:
+  scrape_and_upload:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +22,32 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run scraper
+    - name: Run scraper and save CSV
       run: |
         python scrape_waffle_house.py
+        echo "Scraping and CSV generation complete."
+
+    - name: Upload CSV to Google Drive
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: |
+        echo "Starting upload to Google Drive..."
+        echo "$GOOGLE_CREDENTIALS" > /tmp/credentials.json
+        python -c "
+        import os
+        import google.auth
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload
+
+        credentials = service_account.Credentials.from_service_account_file('/tmp/credentials.json')
+        drive_service = build('drive', 'v3', credentials=credentials)
+
+        file_name = 'waffle_house_data.csv'
+        file_path = '/tmp/waffle_house_data.csv'  # This is where the CSV is saved
+        file_metadata = {'name': file_name, 'parents': ['1bbrB90d_heokUah87yaFvoEubxSMelTV']}
+        media = MediaFileUpload(file_path, mimetype='text/csv')
+        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+        print(f'File uploaded successfully: {file.get("id")}')
+        "
