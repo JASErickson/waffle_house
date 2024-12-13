@@ -1,4 +1,6 @@
 requests
+io
+os
 numpy
 pandas
 google-api-python-client
