@@ -22,7 +22,7 @@ def get_drive_service():
     return build('drive', 'v3', credentials=credentials)
 
 def download_existing_csv(drive_service):
-    """Downloads the existing CSV from Google Drive to the local system."""
+    """Downloads the existing CSV from Google Drive or creates a new one if it doesn't exist."""
     query = f"name='waffle_house_data.csv' and '{FOLDER_ID}' in parents"
     response = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)', pageSize=1).execute()
     files = response.get('files', [])
@@ -43,7 +43,12 @@ def download_existing_csv(drive_service):
             f.write(fh.read())
         print("Existing CSV downloaded successfully.")
     else:
-        print("No existing CSV found. A new file will be created.")
+        print("No existing CSV found. Creating a new one locally.")
+        # Create an empty CSV file
+        with open(LOCAL_CSV_PATH, 'w') as f:
+            f.write("storeCode,businessName,addressLines,city,state,country,\
+                    operated_by,postalCode,latitude,longitude,phoneNumbers,websiteURL,\
+                    businessHours,formattedBusinessHours,slug,localPageUrl,_status,timestamp\n")
 
 def scrape_waffle_house_data():
     url = 'https://locations.wafflehouse.com'  # Replace with the actual URL if needed
@@ -110,6 +115,7 @@ def scrape_waffle_house_data():
                     df_existing = pd.read_csv(LOCAL_CSV_PATH)
                     df_combined = pd.concat([df_existing, df_new], ignore_index=True)
                 else:
+                    print(f"{LOCAL_CSV_PATH} not found. Starting with a new file.")
                     df_combined = df_new
 
                 # Save the updated CSV locally
