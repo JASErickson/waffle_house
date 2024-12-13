@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.x'
+        python-version: '3.12'
 
     - name: Clear pip cache
       run: |
@@ -27,35 +27,12 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install --use-pep517 -r requirements.txt
 
-    - name: Set up Google Cloud credentials
-      run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > /tmp/credentials.json
-
-    - name: Run scraper and save CSV
-      run: |
-        python web_scrape.py
-        echo "Scraping and CSV generation complete."
-
-    - name: Upload CSV to Google Drive
+    - name: Set up Google credentials
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-      run: |
-        echo "Starting upload to Google Drive..."
-        echo "$GOOGLE_CREDENTIALS" > /tmp/credentials.json
-        python -c "
-        import os
-        import google.auth
-        from google.oauth2 import service_account
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaFileUpload
+      run: echo "$GOOGLE_CREDENTIALS" > /tmp/credentials.json
 
-        credentials = service_account.Credentials.from_service_account_file('/tmp/credentials.json')
-        drive_service = build('drive', 'v3', credentials=credentials)
-
-        file_name = 'waffle_house_data.csv'
-        file_path = '/tmp/waffle_house_data.csv'  # This is where the CSV is saved
-        file_metadata = {'name': file_name, 'parents': ['1bbrB90d_heokUah87yaFvoEubxSMelTV']}
-        media = MediaFileUpload(file_path, mimetype='text/csv')
-        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-
-        print(f'File uploaded successfully: {file.get("id")}')
-        "
+    - name: Run the scraper and upload script
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: python web_scrape.py
