@@ -10,7 +10,7 @@ import io
 # ---------- CONFIG ----------
 FOLDER_ID = '1yTC_EqKSAkMbK7ftPFrDnYmJBCVS_fe8'  # Google Drive folder containing CSVs
 SERVICE_ACCOUNT_JSON = '/tmp/credentials.json'    # path to your service account key
-OUTPUT_FILE = "combined.csv"
+OUTPUT_FILE = "waffle_house.dta"
 # ----------------------------
 
 def get_drive_service():
@@ -71,13 +71,18 @@ def main():
 
     combined_df = pd.concat(dfs, ignore_index=True)
 
+    #clean for .dta type
+    combined_df.columns = [c[:32].replace(" ", "_") for c in combined_df.columns]
+    for col in combined_df.select_dtypes(include='datetime'):
+        combined_df[col] = combined_df[col].astype('str')
+
     # Determine save path
     if os.environ.get("GITHUB_ACTIONS"):
         save_path = OUTPUT_FILE
     else:
         save_path = os.path.expanduser(f"~/Downloads/{OUTPUT_FILE}")
 
-    combined_df.to_csv(save_path, index=False)
+    combined_df.to_stata(save_path, index=False)
     print(f"✅ Combined CSV saved to: {save_path}")
 
     # Clean up temporary files
