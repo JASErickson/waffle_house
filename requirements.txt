@@ -1,7 +1,5 @@
 requests
-numpy>=1.26
-tempfile
-io
+numpy>=2.3
 pandas
 google-api-python-client
 beautifulsoup4
