@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.express as px
 
 # 1. Load your dataset
-df = pd.read_csv("waffle_house.csv")
+df = pd.read_csv("/Users/jake/Downloads/waffle_house.csv")
 
 # 2. Ensure timestamp is datetime and extract the date only
 df['timestamp'] = pd.to_datetime(df['timestamp'])
