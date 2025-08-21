@@ -87,7 +87,7 @@ else:
     print(f"Uploaded new combined CSV to Drive: {COMBINED_CSV}")
 
 # -------------------------------
-# CREATE ANIMATED PLOTLY MAP
+# CREATE ANIMATED STATUS PLOTLY MAP
 # -------------------------------
 df_combined['timestamp'] = pd.to_datetime(df_combined['timestamp'])
 df_combined['date'] = df_combined['timestamp'].dt.date
@@ -107,12 +107,57 @@ fig = px.scatter_geo(
     title='Waffle House Status Over Time'
 )
 
-MAP_HTML = "waffle_house_map.html"
+MAP_HTML = "waffle_house_status_map.html"
 fig.write_html(MAP_HTML)
 print(f"Interactive map saved locally as {MAP_HTML}")
 
 # -------------------------------
-# UPLOAD MAP HTML TO DRIVE
+# UPLOAD STATUS MAP HTML TO DRIVE
+# -------------------------------
+media = MediaFileUpload(MAP_HTML, mimetype="text/html")
+# Check if map already exists in the combined folder
+query = f"name='{MAP_HTML}' and '{COMBINED_FOLDER_ID}' in parents and trashed=false"
+results = service.files().list(q=query, fields="files(id, name)").execute()
+files = results.get("files", [])
+
+if files:
+    map_file_id = files[0]['id']
+    service.files().update(fileId=map_file_id, media_body=media).execute()
+    print(f"Updated existing map on Drive: {MAP_HTML}")
+else:
+    file_metadata = {"name": MAP_HTML, "parents": [COMBINED_FOLDER_ID]}
+    service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    print(f"Uploaded new map to Drive: {MAP_HTML}")
+
+# -------------------------------
+# CREATE ANIMATED HOURS PLOTLY MAP
+# -------------------------------
+df_combined['timestamp'] = pd.to_datetime(df_combined['timestamp'])
+df_combined['date'] = df_combined['timestamp'].dt.date
+
+# Map unique colors automatically based on 'businessHours'
+unique_hours = df_combined['businessHours'].unique()
+color_map = {hour: px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)]
+             for i, hour in enumerate(unique_hours)}
+
+fig = px.scatter_geo(
+    df_combined,
+    lat='latitude',
+    lon='longitude',
+    color='businessHours',                # use businessHours for coloring
+    color_discrete_map=color_map,         # dynamically assigned colors
+    hover_name='storeCode',
+    animation_frame=df_combined['date'].astype(str),
+    scope='usa',
+    title='Waffle House Business Hours Over Time'
+)
+
+MAP_HTML = "waffle_house_hours_map.html"
+fig.write_html(MAP_HTML)
+print(f"Interactive map saved locally as {MAP_HTML}")
+
+# -------------------------------
+# UPLOAD HOURS MAP HTML TO DRIVE
 # -------------------------------
 media = MediaFileUpload(MAP_HTML, mimetype="text/html")
 # Check if map already exists in the combined folder
