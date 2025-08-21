@@ -63,13 +63,14 @@ def main():
             path = download_file(service, f['id'], f['name'], temp_dir)
             dfs.append(pd.read_csv(path))
         except Exception as e:
-            print(f"⚠️ Failed to download or read {f['name']}: {e}")
+            print(f"Failed to download or read {f['name']}: {e}")
 
     if not dfs:
         print("No CSVs were successfully downloaded/read.")
         return
 
     combined_df = pd.concat(dfs, ignore_index=True)
+    combined_df.reset_index(drop=True, inplace=True)
 
     #clean for .dta type
     combined_df.columns = [c[:32].replace(" ", "_") for c in combined_df.columns]
@@ -82,8 +83,8 @@ def main():
     else:
         save_path = os.path.expanduser(f"~/Downloads/{OUTPUT_FILE}")
 
-    combined_df.to_stata(save_path, index=False)
-    print(f"✅ Combined CSV saved to: {save_path}")
+    combined_df.to_stata(save_path)  # remove index=False
+    print(f"Combined CSV saved to: {save_path}")
 
     # Clean up temporary files
     for f in os.listdir(temp_dir):

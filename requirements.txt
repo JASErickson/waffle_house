@@ -1,6 +1,6 @@
 requests
 numpy>=2.3
-pandas
+pandas>=1.5
 google-api-python-client
 beautifulsoup4
 google-auth
