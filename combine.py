@@ -10,7 +10,7 @@ import io
 # ---------- CONFIG ----------
 FOLDER_ID = '1yTC_EqKSAkMbK7ftPFrDnYmJBCVS_fe8'  # Google Drive folder containing CSVs
 SERVICE_ACCOUNT_JSON = '/tmp/credentials.json'    # path to your service account key
-OUTPUT_FILE = "waffle_house.dta"
+OUTPUT_FILE = "waffle_house.csv"
 # ----------------------------
 
 def get_drive_service():
