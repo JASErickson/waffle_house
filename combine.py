@@ -70,7 +70,6 @@ def main():
         return
 
     combined_df = pd.concat(dfs, ignore_index=True)
-    combined_df.reset_index(drop=True, inplace=True)
 
     #clean for .dta type
     combined_df.columns = [c[:32].replace(" ", "_") for c in combined_df.columns]
@@ -83,7 +82,7 @@ def main():
     else:
         save_path = os.path.expanduser(f"~/Downloads/{OUTPUT_FILE}")
 
-    combined_df.to_stata(save_path)  # remove index=False
+    combined_df.to_csv(save_path, index=False)
     print(f"Combined CSV saved to: {save_path}")
 
     # Clean up temporary files
