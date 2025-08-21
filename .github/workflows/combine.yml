@@ -37,4 +37,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: combined-csv
-          path: combined.csv
+          path: waffle_house.csv
