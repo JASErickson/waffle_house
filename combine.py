@@ -107,27 +107,27 @@ fig = px.scatter_geo(
     title='Waffle House Status Over Time'
 )
 
-MAP_HTML = "waffle_house_status_map.html"
-fig.write_html(MAP_HTML)
-print(f"Interactive map saved locally as {MAP_HTML}")
+MAP_HTML_S = "waffle_house_status_map.html"
+fig.write_html(MAP_HTML_S)
+print(f"Interactive map saved locally as {MAP_HTML_S}")
 
 # -------------------------------
 # UPLOAD STATUS MAP HTML TO DRIVE
 # -------------------------------
-media = MediaFileUpload(MAP_HTML, mimetype="text/html")
+media_s = MediaFileUpload(MAP_HTML_S, mimetype="text/html")
 # Check if map already exists in the combined folder
-query = f"name='{MAP_HTML}' and '{COMBINED_FOLDER_ID}' in parents and trashed=false"
+query = f"name='{MAP_HTML_S}' and '{COMBINED_FOLDER_ID}' in parents and trashed=false"
 results = service.files().list(q=query, fields="files(id, name)").execute()
 files = results.get("files", [])
 
 if files:
     map_file_id = files[0]['id']
-    service.files().update(fileId=map_file_id, media_body=media).execute()
-    print(f"Updated existing map on Drive: {MAP_HTML}")
+    service.files().update(fileId=map_file_id, media_body=media_s).execute()
+    print(f"Updated existing map on Drive: {MAP_HTML_S}")
 else:
-    file_metadata = {"name": MAP_HTML, "parents": [COMBINED_FOLDER_ID]}
-    service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-    print(f"Uploaded new map to Drive: {MAP_HTML}")
+    file_metadata = {"name": MAP_HTML_S, "parents": [COMBINED_FOLDER_ID]}
+    service.files().create(body=file_metadata, media_body=media_s, fields="id").execute()
+    print(f"Uploaded new map to Drive: {MAP_HTML_S}")
 
 # -------------------------------
 # CREATE ANIMATED HOURS PLOTLY MAP
@@ -152,24 +152,24 @@ fig = px.scatter_geo(
     title='Waffle House Business Hours Over Time'
 )
 
-MAP_HTML = "waffle_house_hours_map.html"
-fig.write_html(MAP_HTML)
-print(f"Interactive map saved locally as {MAP_HTML}")
+MAP_HTML_H = "waffle_house_hours_map.html"
+fig.write_html(MAP_HTML_H)
+print(f"Interactive map saved locally as {MAP_HTML_H}")
 
 # -------------------------------
 # UPLOAD HOURS MAP HTML TO DRIVE
 # -------------------------------
-media = MediaFileUpload(MAP_HTML, mimetype="text/html")
+media_h = MediaFileUpload(MAP_HTML_H, mimetype="text/html")
 # Check if map already exists in the combined folder
-query = f"name='{MAP_HTML}' and '{COMBINED_FOLDER_ID}' in parents and trashed=false"
+query = f"name='{MAP_HTML_H}' and '{COMBINED_FOLDER_ID}' in parents and trashed=false"
 results = service.files().list(q=query, fields="files(id, name)").execute()
 files = results.get("files", [])
 
 if files:
     map_file_id = files[0]['id']
-    service.files().update(fileId=map_file_id, media_body=media).execute()
-    print(f"Updated existing map on Drive: {MAP_HTML}")
+    service.files().update(fileId=map_file_id, media_body=media_h).execute()
+    print(f"Updated existing map on Drive: {MAP_HTML_H}")
 else:
-    file_metadata = {"name": MAP_HTML, "parents": [COMBINED_FOLDER_ID]}
-    service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-    print(f"Uploaded new map to Drive: {MAP_HTML}")
+    file_metadata = {"name": MAP_HTML_H, "parents": [COMBINED_FOLDER_ID]}
+    service.files().create(body=file_metadata, media_body=media_h, fields="id").execute()
+    print(f"Uploaded new map to Drive: {MAP_HTML_H}")
