@@ -8,7 +8,7 @@ import plotly.express as px
 # -------------------------------
 # CONFIG
 # -------------------------------
-SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+SCOPES = ["https://www.googleapis.com/auth/drive"]
 SERVICE_ACCOUNT_FILE = "/tmp/credentials.json"
 DAILY_FOLDER_ID = "1yTC_EqKSAkMbK7ftPFrDnYmJBCVS_fe8"
 COMBINED_FOLDER_ID = "10iofKpOAVkhJx_Tnr9-WvyFTKV_oZd0x"
