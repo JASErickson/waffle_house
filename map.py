@@ -26,4 +26,4 @@ fig = px.scatter_geo(
 )
 
 # 5. Show the map
-fig.show()
+fig.show(renderer="browser")
