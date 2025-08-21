@@ -52,7 +52,7 @@ results = service.files().list(q=query, fields="files(id, name)").execute()
 files = results.get("files", [])
 
 if files:
-    combined_file_id = files[0]['id']
+    combined_file_id = files[0]['id']  # Take the existing file
     request = service.files().get_media(fileId=combined_file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
@@ -61,29 +61,30 @@ if files:
         status, done = downloader.next_chunk()
     fh.seek(0)
     df_combined = pd.read_csv(fh)
-    print("Downloaded previous combined CSV.")
+    print(f"Downloaded previous combined CSV: {files[0]['name']}")
 else:
     df_combined = pd.DataFrame()
+    combined_file_id = None
     print("No previous combined CSV found, starting fresh.")
 
 # -------------------------------
-# APPEND new CSV to combined
+# APPEND new daily CSV
 # -------------------------------
 df_combined = pd.concat([df_combined, df_new], ignore_index=True)
 df_combined.to_csv(COMBINED_CSV, index=False)
 print(f"Updated combined CSV saved locally as {COMBINED_CSV}")
 
 # -------------------------------
-# UPLOAD updated combined CSV back to Drive
+# UPLOAD combined CSV back to Drive
 # -------------------------------
 media = MediaFileUpload(COMBINED_CSV, mimetype="text/csv")
-if files:
+if combined_file_id:
     service.files().update(fileId=combined_file_id, media_body=media).execute()
-    print(f"Updated existing file on Drive: {COMBINED_CSV}")
+    print(f"Appended daily CSV to existing combined CSV on Drive: {COMBINED_CSV}")
 else:
     file_metadata = {"name": COMBINED_CSV, "parents": [COMBINED_FOLDER_ID]}
     service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-    print(f"Uploaded new combined file to Drive: {COMBINED_CSV}")
+    print(f"Uploaded new combined CSV to Drive: {COMBINED_CSV}")
 
 # -------------------------------
 # CREATE ANIMATED PLOTLY MAP
