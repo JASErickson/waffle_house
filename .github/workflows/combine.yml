@@ -29,7 +29,9 @@ jobs:
       - name: Run combine script
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        run: python combine.py
+        run: |
+          set -e
+          python combine.py
 
       - name: Upload combined CSV as artifact
         uses: actions/upload-artifact@v4
