@@ -1,94 +1,129 @@
-#!/usr/bin/env python3
-import os
 import pandas as pd
-import tempfile
-from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from google.oauth2 import service_account
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 import io
+import plotly.express as px
 
-# ---------- CONFIG ----------
-FOLDER_ID = '1yTC_EqKSAkMbK7ftPFrDnYmJBCVS_fe8'  # Google Drive folder containing CSVs
-SERVICE_ACCOUNT_JSON = '/tmp/credentials.json'    # path to your service account key
-OUTPUT_FILE = "waffle_house.csv"
-# ----------------------------
+# -------------------------------
+# CONFIG
+# -------------------------------
+SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+SERVICE_ACCOUNT_FILE = "/tmp/credentials.json"
+DAILY_FOLDER_ID = "1yTC_EqKSAkMbK7ftPFrDnYmJBCVS_fe8"
+COMBINED_FOLDER_ID = "10iofKpOAVkhJx_Tnr9-WvyFTKV_oZd0x"
+COMBINED_CSV = "waffle_house.csv"   # name of combined CSV
+NEW_CSV = "daily_waffle_house.csv"  # local name for latest daily CSV
 
-def get_drive_service():
-    creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_JSON)
-    return build('drive', 'v3', credentials=creds)
+# -------------------------------
+# AUTH
+# -------------------------------
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+)
+service = build("drive", "v3", credentials=credentials)
 
-def list_csv_files(service, folder_id):
-    """List all CSV files in the folder, handling pagination"""
-    files = []
-    page_token = None
-    query = f"'{folder_id}' in parents and mimeType='text/csv' and trashed=false"
+# -------------------------------
+# DOWNLOAD latest daily CSV
+# -------------------------------
+query = f"'{DAILY_FOLDER_ID}' in parents and trashed=false"
+results = service.files().list(q=query, orderBy="createdTime desc", pageSize=1, fields="files(id, name)").execute()
+files = results.get("files", [])
 
-    while True:
-        response = service.files().list(
-            q=query,
-            spaces='drive',
-            fields="nextPageToken, files(id, name)",
-            pageToken=page_token
-        ).execute()
-        files.extend(response.get("files", []))
-        page_token = response.get('nextPageToken')
-        if not page_token:
-            break
-    return files
+if not files:
+    raise Exception("No daily CSV found in DAILY_FOLDER_ID")
 
-def download_file(service, file_id, file_name, temp_dir):
-    """Download a file from Google Drive to a temporary folder"""
-    request = service.files().get_media(fileId=file_id)
-    file_path = os.path.join(temp_dir, file_name)
-    fh = io.FileIO(file_path, 'wb')
+daily_file_id = files[0]['id']
+request = service.files().get_media(fileId=daily_file_id)
+fh = io.BytesIO()
+downloader = MediaIoBaseDownload(fh, request)
+done = False
+while not done:
+    status, done = downloader.next_chunk()
+fh.seek(0)
+df_new = pd.read_csv(fh)
+print(f"Downloaded latest daily CSV: {files[0]['name']}")
+
+# -------------------------------
+# DOWNLOAD previous combined CSV if it exists
+# -------------------------------
+query = f"name='{COMBINED_CSV}' and '{COMBINED_FOLDER_ID}' in parents and trashed=false"
+results = service.files().list(q=query, fields="files(id, name)").execute()
+files = results.get("files", [])
+
+if files:
+    combined_file_id = files[0]['id']
+    request = service.files().get_media(fileId=combined_file_id)
+    fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
     done = False
     while not done:
         status, done = downloader.next_chunk()
-    fh.close()
-    return file_path
+    fh.seek(0)
+    df_combined = pd.read_csv(fh)
+    print("Downloaded previous combined CSV.")
+else:
+    df_combined = pd.DataFrame()
+    print("No previous combined CSV found, starting fresh.")
 
-def main():
-    service = get_drive_service()
-    csv_files = list_csv_files(service, FOLDER_ID)
-    if not csv_files:
-        print("No CSV files found in the Google Drive folder.")
-        return
+# -------------------------------
+# APPEND new CSV to combined
+# -------------------------------
+df_combined = pd.concat([df_combined, df_new], ignore_index=True)
+df_combined.to_csv(COMBINED_CSV, index=False)
+print(f"Updated combined CSV saved locally as {COMBINED_CSV}")
 
-    temp_dir = tempfile.mkdtemp()
-    dfs = []
-    for f in csv_files:
-        try:
-            print(f"Downloading {f['name']}...")
-            path = download_file(service, f['id'], f['name'], temp_dir)
-            dfs.append(pd.read_csv(path))
-        except Exception as e:
-            print(f"Failed to download or read {f['name']}: {e}")
+# -------------------------------
+# UPLOAD updated combined CSV back to Drive
+# -------------------------------
+media = MediaFileUpload(COMBINED_CSV, mimetype="text/csv")
+if files:
+    service.files().update(fileId=combined_file_id, media_body=media).execute()
+    print(f"Updated existing file on Drive: {COMBINED_CSV}")
+else:
+    file_metadata = {"name": COMBINED_CSV, "parents": [COMBINED_FOLDER_ID]}
+    service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    print(f"Uploaded new combined file to Drive: {COMBINED_CSV}")
 
-    if not dfs:
-        print("No CSVs were successfully downloaded/read.")
-        return
+# -------------------------------
+# CREATE ANIMATED PLOTLY MAP
+# -------------------------------
+df_combined['timestamp'] = pd.to_datetime(df_combined['timestamp'])
+df_combined['date'] = df_combined['timestamp'].dt.date
 
-    combined_df = pd.concat(dfs, ignore_index=True)
+status_color = {'A': 'green', 'CT': 'red', 'OS': 'blue'}
+df_combined['color'] = df_combined['_status'].map(status_color)
 
-    #clean for .dta type
-    combined_df.columns = [c[:32].replace(" ", "_") for c in combined_df.columns]
-    for col in combined_df.select_dtypes(include='datetime'):
-        combined_df[col] = combined_df[col].astype('str')
+fig = px.scatter_geo(
+    df_combined,
+    lat='latitude',
+    lon='longitude',
+    color='_status',
+    color_discrete_map=status_color,
+    hover_name='storeCode',
+    animation_frame=df_combined['date'].astype(str),
+    scope='usa',
+    title='Waffle House Status Over Time'
+)
 
-    # Determine save path
-    if os.environ.get("GITHUB_ACTIONS"):
-        save_path = OUTPUT_FILE
-    else:
-        save_path = os.path.expanduser(f"~/Downloads/{OUTPUT_FILE}")
+MAP_HTML = "waffle_house_map.html"
+fig.write_html(MAP_HTML)
+print(f"Interactive map saved locally as {MAP_HTML}")
 
-    combined_df.to_csv(save_path, index=False)
-    print(f"Combined CSV saved to: {save_path}")
+# -------------------------------
+# UPLOAD MAP HTML TO DRIVE
+# -------------------------------
+media = MediaFileUpload(MAP_HTML, mimetype="text/html")
+# Check if map already exists in the combined folder
+query = f"name='{MAP_HTML}' and '{COMBINED_FOLDER_ID}' in parents and trashed=false"
+results = service.files().list(q=query, fields="files(id, name)").execute()
+files = results.get("files", [])
 
-    # Clean up temporary files
-    for f in os.listdir(temp_dir):
-        os.remove(os.path.join(temp_dir, f))
-    os.rmdir(temp_dir)
-
-if __name__ == "__main__":
-    main()
+if files:
+    map_file_id = files[0]['id']
+    service.files().update(fileId=map_file_id, media_body=media).execute()
+    print(f"Updated existing map on Drive: {MAP_HTML}")
+else:
+    file_metadata = {"name": MAP_HTML, "parents": [COMBINED_FOLDER_ID]}
+    service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    print(f"Uploaded new map to Drive: {MAP_HTML}")

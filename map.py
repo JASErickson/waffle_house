@@ -1,8 +1,23 @@
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
 import pandas as pd
 import plotly.express as px
 
-# 1. Load your dataset
-df = pd.read_csv("/Users/jake/Downloads/waffle_house.csv")
+SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+SERVICE_ACCOUNT_FILE = "/tmp/credentials.json"
+FILE_ID = "1YUJd4T8w17YNSn_l5x8409_wvA908jYH"
+
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+)
+service = build("drive", "v3", credentials=credentials)
+
+request = service.files().get_media(fileId=FILE_ID)
+with open("waffle_house.csv", "wb") as f:
+    f.write(request.execute())
+
+# Now your plotting code reads "waffle_house.csv"
+df = pd.read_csv("waffle_house.csv")
 
 # 2. Ensure timestamp is datetime and extract the date only
 df['timestamp'] = pd.to_datetime(df['timestamp'])
